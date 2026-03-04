@@ -83,14 +83,20 @@ def html_to_png(html_content: str, output_filename: str = "legal_card.png") -> b
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        browser = p.chromium.launch(args=[
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--force-color-profile=srgb",
+        ])
         context = browser.new_context(
             viewport={"width": 1024, "height": 1536},
             device_scale_factor=2,
         )
         page = context.new_page()
         page.set_content(html_content, wait_until="networkidle")
-        page.wait_for_timeout(2000)
+        page.evaluate("async () => await document.fonts.ready")
+        page.wait_for_timeout(5000)
 
         # Auto-fit text after fonts are confirmed loaded
         page.evaluate("""
