@@ -6,9 +6,16 @@ Flow: URL → Scrape → Gemini Extract → Human Verify/Edit → Render → Dow
 
 import streamlit as st
 import sys
+import subprocess
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+
+# Install Playwright Chromium on Streamlit Cloud (runs once per container session)
+_marker = Path("/tmp/.playwright_installed")
+if not _marker.exists():
+    subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+    _marker.touch()
 
 from modules.scraper import scrape_article
 from modules.extractor import extract_structured_data
