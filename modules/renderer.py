@@ -95,8 +95,9 @@ def html_to_png(html_content: str, output_filename: str = "legal_card.png") -> b
         )
         page = context.new_page()
         page.set_content(html_content, wait_until="networkidle")
-        page.evaluate("async () => await document.fonts.ready")
-        page.wait_for_timeout(5000)
+        # Force all fonts to load (catches Google Fonts failures gracefully)
+        page.evaluate("async () => { await document.fonts.ready; await Promise.all([...document.fonts].map(f => f.load().catch(() => {}))); }")
+        page.wait_for_timeout(3000)
 
         # Auto-fit text after fonts are confirmed loaded
         page.evaluate("""
@@ -123,8 +124,8 @@ def html_to_png(html_content: str, output_filename: str = "legal_card.png") -> b
             }
         """)
 
-        card = page.query_selector(".card")
-        png_bytes = card.screenshot(type="png") if card else page.screenshot(type="png")
+        # Use page screenshot clipped to card bounds (more reliable than element screenshot)
+        png_bytes = page.screenshot(type="png", clip={"x": 0, "y": 0, "width": 1024, "height": 1536})
         browser.close()
 
     out_path = OUTPUT_DIR / output_filename
