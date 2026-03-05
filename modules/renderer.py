@@ -39,6 +39,11 @@ def _load_bg_base64() -> str:
         return "data:image/png;base64," + base64.b64encode(f.read()).decode()
 
 
+def _clean(val) -> str:
+    v = str(val).strip() if val else ""
+    return "" if v.lower() in ("not specified", "n/a", "none") else v
+
+
 def _trunc(text: str, max_len: int) -> str:
     text = str(text).strip()
     return text[:max_len - 1] + "…" if len(text) > max_len else text
@@ -67,10 +72,10 @@ def render_card(data: dict, config: dict = None) -> str:
     template_vars = {
         "bg_src":        _load_bg_base64(),
         "current_date":  current_date,
-        "headline":      _trunc(data.get("headline",      ""), 400),
-        "case_name":     _trunc(data.get("case_name",     ""), 200),
-        "case_citation": _trunc(data.get("case_citation", ""), 200),
-        "case_date":     _trunc(data.get("case_date",     ""), 20),
+        "headline":      _trunc(_clean(data.get("headline")),      400),
+        "case_name":     _trunc(_clean(data.get("case_name")),     200),
+        "case_citation": _trunc(_clean(data.get("case_citation")), 200),
+        "case_date":     _trunc(_clean(data.get("case_date")),     20),
     }
 
     rendered = template.render(**template_vars)
