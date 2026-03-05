@@ -73,9 +73,9 @@
   </div>
 
   <div class="overlay overlay--content">
-    <div class="headline">{{ headline }}</div>
-    <div class="case-name">{{ case_name }};</div>
-    <div class="case-citation">{{ case_citation }};&nbsp;&nbsp;&nbsp;{{ case_date }}</div>
+    {% if headline %}<div class="headline">{{ headline }}</div>{% endif %}
+    {% if case_name %}<div class="case-name">{{ case_name }};</div>{% endif %}
+    {% if case_citation or case_date %}<div class="case-citation">{% if case_citation %}{{ case_citation }};{% endif %}{% if case_date %}&nbsp;&nbsp;&nbsp;{{ case_date }}{% endif %}</div>{% endif %}
   </div>
 </div>
 </body>

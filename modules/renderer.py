@@ -67,10 +67,10 @@ def render_card(data: dict, config: dict = None) -> str:
     template_vars = {
         "bg_src":        _load_bg_base64(),
         "current_date":  current_date,
-        "headline":      _trunc(data.get("headline",      "Not specified"), 400),
-        "case_name":     _trunc(data.get("case_name",     "Not specified"), 200),
-        "case_citation": _trunc(data.get("case_citation", "Not specified"), 200),
-        "case_date":     _trunc(data.get("case_date",     ""),              20),
+        "headline":      _trunc(data.get("headline",      ""), 400),
+        "case_name":     _trunc(data.get("case_name",     ""), 200),
+        "case_citation": _trunc(data.get("case_citation", ""), 200),
+        "case_date":     _trunc(data.get("case_date",     ""), 20),
     }
 
     rendered = template.render(**template_vars)

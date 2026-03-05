@@ -126,11 +126,15 @@ if st.button("🔍 Fetch & Extract", use_container_width=False):
                     with st.expander("Raw Gemini output (debug)"):
                         st.code(extracted["raw_response"])
             else:
+                def _clean(val):
+                    v = str(val).strip() if val else ""
+                    return "" if v.lower() in ("not specified", "n/a", "none", "") else v
+
                 st.session_state.extracted          = extracted
-                st.session_state.edit_headline      = extracted.get("headline", "")
-                st.session_state.edit_case_name     = extracted.get("case_name", "")
-                st.session_state.edit_case_citation = extracted.get("case_citation", "")
-                st.session_state.edit_case_date     = extracted.get("case_date", "")
+                st.session_state.edit_headline      = _clean(extracted.get("headline"))
+                st.session_state.edit_case_name     = _clean(extracted.get("case_name"))
+                st.session_state.edit_case_citation = _clean(extracted.get("case_citation"))
+                st.session_state.edit_case_date     = _clean(extracted.get("case_date"))
                 st.success(f"✅ Fetched & extracted: **{scraped['title'][:80]}**")
 
 # Show summary persistently whenever extracted data is available
