@@ -11,7 +11,6 @@ Output : 2× scale = 2048×3072px
 """
 
 import logging
-import random
 from modules.renderers import template1, template2
 
 logger = logging.getLogger(__name__)
@@ -20,11 +19,10 @@ _RENDERERS = [template1, template2]
 
 
 def render_card(data: dict) -> str:
-    """Randomly select a template and render the card HTML."""
-    # TODO: set to None to re-enable random selection
-    _force_template = template2
-
-    renderer = _force_template if _force_template else random.choice(_RENDERERS)
+    """Select a template based on the current date (rotates daily) and render the card HTML."""
+    from datetime import date
+    day_index = date.today().toordinal() % len(_RENDERERS)
+    renderer = _RENDERERS[day_index]
     logger.info("Selected renderer: %s", renderer.__name__)
     return renderer.render_card(data)
 
