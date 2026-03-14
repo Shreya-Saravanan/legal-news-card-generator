@@ -1,91 +1,41 @@
 """
-renderer.py — Jinja2 rendering + Playwright HTML→PNG export.
+renderer.py — Dispatcher: randomly picks a card template, then renders HTML → PNG.
 
-Canvas : 1024×1536px (matches background image exactly).
-Output : 2× scale = 2048×3072px.
+Templates available:
+  template1  — original CNICA card (date band in centre)
+  template2  — ArbitrationTimes card (date top-right, headline above separator,
+                case details below separator)
 
-Template variables:
-  bg_src         : base64 data URI of background PNG
-  current_date   : e.g. "19 FEBRUARY 2026"  (shown in date band)
-  headline       : Bold ruling headline (up to 3 lines)
-  case_name      : "Petitioner Vs. Respondent"
-  case_citation  : "Arbitration O.P.(Com.Div.) No.603 of 2022"
-  case_date      : "20.01.2026"
+Canvas : 1024×1536px
+Output : 2× scale = 2048×3072px
 """
 
 import logging
-import base64
-from pathlib import Path
-from datetime import datetime
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+import random
+from modules.renderers import template1, template2
 
 logger = logging.getLogger(__name__)
 
-TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-ASSETS_DIR    = Path(__file__).parent.parent / "assets"
-OUTPUT_DIR    = Path(__file__).parent.parent / "output"
-OUTPUT_DIR.mkdir(exist_ok=True)
-
-BG_IMAGE_PATH = ASSETS_DIR / "cnica_template_background.png"
+_RENDERERS = [template1, template2]
 
 
-def _load_bg_base64() -> str:
-    if not BG_IMAGE_PATH.exists():
-        raise FileNotFoundError(
-            f"Background image not found: {BG_IMAGE_PATH}\n"
-            f"Place cnica_template_background.png in: {ASSETS_DIR}/"
-        )
-    with open(BG_IMAGE_PATH, "rb") as f:
-        return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+def render_card(data: dict) -> str:
+    """Randomly select a template and render the card HTML."""
+    # TODO: set to None to re-enable random selection
+    _force_template = template2
 
-
-def _clean(val) -> str:
-    v = str(val).strip() if val else ""
-    return "" if v.lower() in ("not specified", "n/a", "none") else v
-
-
-def _trunc(text: str, max_len: int) -> str:
-    text = str(text).strip()
-    return text[:max_len - 1] + "…" if len(text) > max_len else text
-
-
-def render_card(data: dict, config: dict = None) -> str:
-    """
-    Render the card HTML template.
-
-    Args:
-        data: dict with keys — headline, case_name, case_citation, case_date
-        config: unused (branding is in the background image)
-
-    Returns:
-        Rendered HTML string.
-    """
-    env = Environment(
-        loader=FileSystemLoader(str(TEMPLATES_DIR)),
-        autoescape=select_autoescape(["html"]),
-    )
-    template = env.get_template("card_template.html")
-
-    # Date band: always show today's date
-    current_date = datetime.now().strftime("%-d %B %Y").upper()
-
-    template_vars = {
-        "bg_src":        _load_bg_base64(),
-        "current_date":  current_date,
-        "headline":      _trunc(_clean(data.get("headline")),      400),
-        "case_name":     _trunc(_clean(data.get("case_name")),     200),
-        "case_citation": _trunc(_clean(data.get("case_citation")), 200),
-        "case_date":     _trunc(_clean(data.get("case_date")),     20),
-    }
-
-    rendered = template.render(**template_vars)
-    logger.info("Template rendered (%d chars)", len(rendered))
-    return rendered
+    renderer = _force_template if _force_template else random.choice(_RENDERERS)
+    logger.info("Selected renderer: %s", renderer.__name__)
+    return renderer.render_card(data)
 
 
 def html_to_png(html_content: str, output_filename: str = "legal_card.png") -> bytes:
     """Convert rendered HTML to PNG via Playwright (2048×3072px output)."""
+    from pathlib import Path
     from playwright.sync_api import sync_playwright
+
+    OUTPUT_DIR = Path(__file__).parent.parent / "output"
+    OUTPUT_DIR.mkdir(exist_ok=True)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(args=[
@@ -123,13 +73,14 @@ def html_to_png(html_content: str, output_filename: str = "legal_card.png") -> b
                         el.style.fontSize = size + 'px';
                     }
                 }
-                fitHeight(document.querySelector('.headline'), 20);
-                fitWidth(document.querySelector('.case-name'), 16);
-                fitWidth(document.querySelector('.case-citation'), 16);
+                fitHeight(document.querySelector('.headline'), 16);
+                fitWidth(document.querySelector('.case-name'), 14);
+                fitWidth(document.querySelector('.case-citation'), 14);
+                fitWidth(document.querySelector('.case-date'), 14);
+                fitWidth(document.querySelector('.case-block'), 12);
             }
         """)
 
-        # Use page screenshot clipped to card bounds (more reliable than element screenshot)
         png_bytes = page.screenshot(type="png", clip={"x": 0, "y": 0, "width": 1024, "height": 1536})
         browser.close()
 
